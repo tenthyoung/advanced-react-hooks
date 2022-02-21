@@ -1,5 +1,6 @@
 // useCallback: custom hooks
-// http://localhost:3000/isolated/final/02.js
+// 💯 return a memoized `run` function from useAsync
+// http://localhost:3000/isolated/final/02.extra-2.js
 
 import * as React from 'react'
 import {
@@ -27,7 +28,7 @@ function asyncReducer(state, action) {
   }
 }
 
-function useAsync(asyncCallback, initialState) {
+function useAsync(initialState) {
   const [state, dispatch] = React.useReducer(asyncReducer, {
     status: 'idle',
     data: null,
@@ -35,15 +36,9 @@ function useAsync(asyncCallback, initialState) {
     ...initialState,
   })
 
-  // So this will run whenever the pokemonName changes
-  React.useEffect(() => {
-    const promise = asyncCallback()
-    // in what scenarios will the promise not exist?
-    if (!promise) {
-      return
-    }
-    // So if there is a promise, then it immediately sets the status
-    // as pending
+  const {data, error, status} = state
+
+  const run = React.useCallback(promise => {
     dispatch({type: 'pending'})
     promise.then(
       data => {
@@ -53,28 +48,32 @@ function useAsync(asyncCallback, initialState) {
         dispatch({type: 'rejected', error})
       },
     )
-    // too bad the eslint plugin can't statically analyze this :-(
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [asyncCallback])
+  }, [])
 
-  return state
+  return {
+    error,
+    status,
+    data,
+    run,
+  }
 }
 
 function PokemonInfo({pokemonName}) {
-  // This is better because you won't have a new function
-  // being recreated on every re-render
-  const asyncCallback = React.useCallback(() => {
-    if (!pokemonName) {
-      return
-    }
-    return fetchPokemon(pokemonName)
-  }, [pokemonName])
-
-  const state = useAsync(asyncCallback, {
+  const {
+    data: pokemon,
+    status,
+    error,
+    run,
+  } = useAsync({
     status: pokemonName ? 'pending' : 'idle',
   })
 
-  const {data: pokemon, status, error} = state
+  React.useEffect(() => {
+    if (!pokemonName) {
+      return
+    }
+    run(fetchPokemon(pokemonName))
+  }, [pokemonName, run])
 
   if (status === 'idle') {
     return 'Submit a pokemon'
