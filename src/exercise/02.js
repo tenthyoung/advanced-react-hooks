@@ -35,11 +35,15 @@ function useAsync(asyncCallback, initialState, dependencies) {
     ...initialState,
   })
 
+  // So this will run whenever the pokemonName changes
   React.useEffect(() => {
     const promise = asyncCallback()
+    // in what scenarios will the promise not exist?
     if (!promise) {
       return
     }
+    // So if there is a promise, then it immediately sets the status
+    // as pending
     dispatch({type: 'pending'})
     promise.then(
       data => {
